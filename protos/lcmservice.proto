@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+option csharp_namespace = "lcmcontroller";
+
+package lcmservice;
+
+service LCM {
+  rpc instantiate (InstantiateRequest) returns (InstantiateResponse) {}
+  rpc terminate (TerminateRequest) returns (TerminateResponse) {}
+  rpc uploadConfig (stream UploadCfgRequest) returns (UploadCfgResponse) {}
+  rpc removeConfig (RemoveCfgRequest) returns (RemoveCfgResponse) {}
+  rpc uploadPackage (stream UploadPackageRequest) returns (UploadPackageResponse) {}
+  rpc deletePackage (DeletePackageRequest) returns (DeletePackageResponse) {}
+}
+
+message InstantiateRequest {
+  string appInstanceId = 1;
+  string appPackageId = 2;
+  string hostIp = 3;
+  map<string,string> parameters = 4;
+}
+
+message InstantiateResponse {
+  string status = 1;
+}
+
+message TerminateRequest {
+  string appInstanceId = 1;
+  string hostIp = 2;
+}
+
+message TerminateResponse {
+  string status = 1;
+}
+
+message UploadCfgRequest {
+  oneof data {
+    string hostIp = 1;
+    bytes configFile = 2;
+  };
+}
+
+message UploadCfgResponse {
+  string status = 1;
+}
+
+message RemoveCfgRequest {
+  
+  string hostIp = 1;
+}
+
+message RemoveCfgResponse {
+  string status = 1;
+}
+
+message UploadPackageRequest {
+  oneof data {
+    string appPackageId = 1;
+    string hostIp = 2;
+    bytes package = 3;
+  };
+}
+
+message UploadPackageResponse {
+  string status = 1;
+}
+
+message DeletePackageRequest {
+  string hostIp = 1;
+  string appPackageId = 2;
+}
+
+message DeletePackageResponse {
+  string status = 1;
+}
