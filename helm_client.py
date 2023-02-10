@@ -6,28 +6,26 @@ import logging
 
 K8S_CONFIG_PATH = "k8sconfigs"
 
-parent_dir = Path().absolute()
-Path.cwd()
-kubeConfigPath = os.path.abspath(os.path.join(parent_dir, K8S_CONFIG_PATH))
+base_dir = os.getcwd()
+kubeConfigPath = os.path.abspath(os.path.join(base_dir, K8S_CONFIG_PATH))
 
-if os.path.exists(kubeConfigPath):
-    print("Success")
+if not os.path.exists(kubeConfigPath):
+    logging.error("K8s config dir does not exist")
 
 
-class HelmClient(object):
+class HelmClient:
     # Specify the kubeconfig file to use
     # client = Client(executable = "/path/to/helm")
     def __init__(self, kubeconfig, hostIp):
         self.kubeconfig = kubeconfig
         self.hostIp = hostIp
-        self.client = Client()
+        self.client = Client(kubeconfig=kubeconfig)
 
     # List the deployed releases
     async def list_releases(self):
         releases = await self.client.list_releases(all=True, all_namespaces=True)
         for release in releases:
             revision = await release.current_revision()
-
             logging.debug(
                 "[%s] [%s] [%s] [%s]",
                 release.name,
@@ -40,7 +38,11 @@ class HelmClient(object):
     async def install_chart(self, releasename, chartname, repo, version):
         chart = await self.client.get_chart(chartname, repo=repo, version=version)
         revision = await self.client.install_or_upgrade_release(
-            release_name=releasename, chart=chart, atomic=True, wait=True
+            release_name=releasename,
+            chart=chart,
+            atomic=False,
+            cleanup_on_fail=True,
+            wait=False,
         )
         logging.debug(
             "[%s] [%s] [%s] [%s]",
@@ -69,11 +71,11 @@ if __name__ == "__main__":
     )
     hostIp = "172.23.18.56"
     kubeconfig = f"{kubeConfigPath}{os.sep}{hostIp}.yaml"
-    helm = HelmClient(kubeconfig, hostIp)
+    helm = HelmClient(os.path.abspath(kubeconfig), hostIp)
     # asyncio.run(
     #     helm.install_chart(
     #         "my-release", "nginx", "https://charts.bitnami.com/bitnami", "13.2.23"
     #     )
     # )
-    asyncio.run(helm.list_releases())
-    # asyncio.run(helm.uninstall_chart("my-release"))
+    # asyncio.run(helm.list_releases())
+    asyncio.run(helm.uninstall_chart("my-release"))
