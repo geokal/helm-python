@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import re
+import zipfile
 import grpc
 import os
 import pathlib
@@ -21,18 +22,93 @@ packagePath = os.path.abspath(os.path.join(parent_dir, APP_PACKAGES_PATH))
 
 
 def create_dir(path):
+    """
+    Creates the directory for the specified path
+    """
     try:
         if not os.path.exists(path):
             os.makedirs(path)
     except OSError:
         logging.error("Error: Creating directory. %s ", path)
+        return False
+    return True
 
 
 def delete_dir(path):
+    """
+    Function to delete/unlink the specified path
+    """
     pass
 
 
+def extract_csar(zip_file):
+    """
+    Extracts the zip/csar file in the current directory
+    """
+    zip_file_path = os.path.abspath(zip_file)
+
+    """
+    Extract a zip file including any nested zip files
+    Delete the zip file(s) after extraction
+    """
+    with zipfile.ZipFile(zip_file, "r") as zfile:
+        ext_path = os.path.join(
+            # TODO: change to os.path.dirname(zip_file)
+            os.path.dirname(zip_file),
+            os.path.splitext(zip_file)[0],
+        )
+        zfile.extractall(path=ext_path)
+    # os.remove(zippedFile)
+    # for root, dirs, files in os.walk(ext_path):
+    #     for filename in files:
+    #         if re.search(r"\.zip$", filename):
+    #             fileSpec = os.path.join(root, filename)
+    #             extract_csar(fileSpec)
+    logging.info(f"Extracted csar in [{ext_path}]")
+    return ext_path
+
+
+def get_helm_chart(host_Ip, package_Id):
+    """
+    Gets the Chart directory for the specified hostIp and packageId
+    """
+    PkgPath = packagePath + "/" + package_Id + "-" + host_Ip
+    list_PkgPath = [f.path for f in os.scandir(PkgPath) if f.is_dir()]
+
+    app_path = list_PkgPath[0] + "/Artifacts/Deployment/Charts"
+    try:
+        arti_file_path = get_deploy_artifact(app_path, ".tgz")
+    except:
+        logging.error("Artifact not available in application package.")
+    return arti_file_path
+
+
+def get_deploy_artifact(directory_path, extension):
+    """
+    Finds files in a directory with a given file extension.
+
+    Args:
+        directory_path (str): The path of the directory to search in.
+        extension (str): The file extension to search for (e.g. '.tgz').
+
+    Returns:
+        A list of file paths (str) in the directory that have the specified extension.
+    """
+    if not os.path.exists(directory_path):
+        logging.error(f"Directory '{directory_path}' does not exist.")
+        return []
+
+    files = []
+    for file_name in os.listdir(directory_path):
+        if file_name.endswith(extension):
+            files.append(os.path.join(directory_path, file_name))
+    return directory_path + "/" + files[0]
+
+
 def validate_uuid(uuid):
+    """
+    Validates if the input parameter is a valid UUID
+    """
     if uuid is None:
         logging.error("uuid parameter required")
         return False
@@ -45,6 +121,9 @@ def validate_uuid(uuid):
 
 
 def validate_ipv4(ip):
+    """
+    Validates if the input parameter is a valid IPv4 address
+    """
     if ip is None:
         return False
     octets = ip.split(".")
@@ -61,6 +140,7 @@ def validate_ipv4(ip):
     return True
 
 
+# TODO: Absctract class in a different file
 class LcmService(lcmservice_pb2_grpc.LCMServicer):
     async def uploadConfig(self, request_iterator, context):
         data = bytearray()
@@ -121,10 +201,17 @@ class LcmService(lcmservice_pb2_grpc.LCMServicer):
                 create_dir(packagePath)
                 packageFilePath = f"{packagePath}{os.path.sep}{packageId}-{hostIp}"
                 create_dir(packageFilePath)
-                filepath = f"{packageFilePath}{os.path.sep}{packageId}.csar"
+                csarFilePath = f"{packageFilePath}{os.path.sep}{packageId}.csar"
             data.extend(request.package)
-        with open(filepath, "ab") as f:
+        with open(csarFilePath, "ab") as f:
             f.write(data)
+
+        try:
+            extracted_csar = extract_csar(csarFilePath)
+        except Exception as e:
+            logging.error(e, exc_info=True)  # log exception info at CRITICAL log level
+        logging.debug(extracted_csar)
+
         logging.info("Uploaded package request is successful")
         return lcmservice_pb2.UploadPackageResponse(status="Success!")
 
@@ -157,6 +244,13 @@ class LcmService(lcmservice_pb2_grpc.LCMServicer):
             for item in dict:
                 if item in request.parameters:
                     param[item] = request.parameters[item]
+
+        get_helm_chart(hostIp, packageId)
+        # TODO: Read the Helm Chart values.yaml and take the namespace parameter
+
+        # TODO: If the namespace is not default, create a Kubernetes NS object with the appInstId as name
+
+        # TODO: Call helm_client.install_chart()
         return lcmservice_pb2.InstantiateResponse(status="Success!")
 
 
