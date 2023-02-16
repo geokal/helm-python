@@ -1,20 +1,17 @@
 [[source]]
-url = "https://pypi.org/simple"
+url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
 [packages]
-pydantic = "==1.10.4"
 pyhelm3 = {git = "https://github.com/stackhpc/pyhelm3.git"}
 grpcio = "*"
 grpcio-tools = "*"
 grpcio-reflection = "*"
+kubernetes = "*"
 
 [dev-packages]
 black = "*"
 
 [requires]
 python_version = "3.11"
-
-[pipenv]
-allow_prereleases = true
