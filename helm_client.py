@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from pyhelm3 import Client
+from kubernetes import client, config
 import asyncio
 import logging
 
@@ -13,13 +14,17 @@ if not os.path.exists(kubeConfigPath):
     logging.error("K8s config dir does not exist")
 
 
+# TODO: Create a factory for the Helm client
 class HelmClient:
     # Specify the kubeconfig file to use
     # client = Client(executable = "/path/to/helm")
-    def __init__(self, kubeconfig, hostIp):
-        self.kubeconfig = kubeconfig
+    def __init__(self, hostIp):
         self.hostIp = hostIp
-        self.client = Client(kubeconfig=kubeconfig)
+        kubeconfig = kubeConfigPath + "/" + hostIp + ".yaml"
+        if not os.path.exists(kubeconfig):
+            logging.error("K8s config for this MEC host does not exist")
+
+        self.client = Client(kubeconfig=os.path.abspath(kubeconfig))
 
     # List the deployed releases
     async def list_releases(self):
@@ -58,7 +63,13 @@ class HelmClient:
         revision = await self.client.get_current_revision(
             releasename, namespace="default"
         )
-        await revision.release.uninstall(wait=True)
+        await revision.release.uninstall()
+
+    async def deploy_chart(self, appPkgRecord, appInsId):
+        pass
+
+    async def unDeploy_chart(self):
+        pass
 
 
 #   Or directly by name
@@ -69,13 +80,13 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging.DEBUG,
     )
-    hostIp = "172.23.18.56"
-    kubeconfig = f"{kubeConfigPath}{os.sep}{hostIp}.yaml"
-    helm = HelmClient(os.path.abspath(kubeconfig), hostIp)
+    hostIp = "172.19.20.64"
+    # kubeconfig = kubeConfigPath + "/" + hostIp + ".yaml"
+    helm = HelmClient(hostIp)
     # asyncio.run(
     #     helm.install_chart(
     #         "my-release", "nginx", "https://charts.bitnami.com/bitnami", "13.2.23"
     #     )
     # )
-    # asyncio.run(helm.list_releases())
-    asyncio.run(helm.uninstall_chart("my-release"))
+    asyncio.run(helm.list_releases())
+    # asyncio.run(helm.uninstall_chart("my-release"))
