@@ -20,7 +20,7 @@ class HelmClient:
     # client = Client(executable = "/path/to/helm")
     def __init__(self, hostIp):
         self.hostIp = hostIp
-        kubeconfig = kubeConfigPath + "/" + hostIp + ".yaml"
+        kubeconfig = kubeConfigPath + "/" + hostIp
         if not os.path.exists(kubeconfig):
             logging.error("K8s config for this MEC host does not exist")
 
@@ -40,8 +40,8 @@ class HelmClient:
             )
 
     # Install or upgrade a release
-    async def install_chart(self, releasename, chartname, repo, version):
-        chart = await self.client.get_chart(chartname, repo=repo, version=version)
+    async def install_chart(self, releasename, chart_ref):
+        chart = await self.client.get_chart(chart_ref=chart_ref)
         revision = await self.client.install_or_upgrade_release(
             release_name=releasename,
             chart=chart,
@@ -59,9 +59,9 @@ class HelmClient:
 
     # Uninstall a release
     #   Via the revision
-    async def uninstall_chart(self, releasename):
+    async def uninstall_chart(self, releasename, namespace):
         revision = await self.client.get_current_revision(
-            releasename, namespace="default"
+            releasename, namespace=namespace
         )
         await revision.release.uninstall()
 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging.DEBUG,
     )
-    hostIp = "172.19.20.64"
+    hostIp = "172.25.131.129"
     # kubeconfig = kubeConfigPath + "/" + hostIp + ".yaml"
     helm = HelmClient(hostIp)
     # asyncio.run(
@@ -89,4 +89,4 @@ if __name__ == "__main__":
     #     )
     # )
     asyncio.run(helm.list_releases())
-    # asyncio.run(helm.uninstall_chart("my-release"))
+    # asyncio.run(helm.uninstall_chart(releasename="my-release", namespace="default"))

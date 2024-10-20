@@ -9,6 +9,7 @@ grpcio = "*"
 grpcio-tools = "*"
 grpcio-reflection = "*"
 kubernetes = "*"
+pyfiglet = "*"
 
 [dev-packages]
 black = "*"
