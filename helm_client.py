@@ -80,13 +80,10 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging.DEBUG,
     )
-    hostIp = "172.25.131.129"
-    # kubeconfig = kubeConfigPath + "/" + hostIp + ".yaml"
+    hostIp = "172.30.16.2"
+    #kubeconfig = kubeConfigPath + "/" + hostIp
     helm = HelmClient(hostIp)
-    # asyncio.run(
-    #     helm.install_chart(
-    #         "my-release", "nginx", "https://charts.bitnami.com/bitnami", "13.2.23"
-    #     )
-    # )
     asyncio.run(helm.list_releases())
-    # asyncio.run(helm.uninstall_chart(releasename="my-release", namespace="default"))
+    asyncio.run(helm.install_chart("my-nginx", "nginx", "https://charts.bitnami.com/bitnami"))
+
+    # asyncio.run(helm.uninstall_chart(releasename="my-nginx", namespace="default"))
